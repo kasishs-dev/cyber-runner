@@ -196,16 +196,7 @@ export const useGameState = create<GameState>((set, get) => ({
     };
     
     set({ user: newUser });
-    
-    // Sync to backend
-    fetch("/api/user/profile", {
-      method: "POST",
-      headers: { 
-        "Content-Type": "application/json",
-        "x-guest-id": state.getGuestId() 
-      },
-      body: JSON.stringify(newUser)
-    });
+    get().saveToBackend();
   },
 
   setSkin: (skinId, type) => {
@@ -218,15 +209,7 @@ export const useGameState = create<GameState>((set, get) => ({
     };
     
     set({ user: newUser });
-    
-    fetch("/api/user/profile", {
-      method: "POST",
-      headers: { 
-        "Content-Type": "application/json",
-        "x-guest-id": state.getGuestId() 
-      },
-      body: JSON.stringify(newUser)
-    });
+    get().saveToBackend();
   },
 
   setUsername: (name: string) => {
@@ -239,16 +222,7 @@ export const useGameState = create<GameState>((set, get) => ({
     };
     
     set({ user: newUser });
-    
-    // Sync to backend
-    fetch("/api/user/profile", {
-      method: "POST",
-      headers: { 
-        "Content-Type": "application/json",
-        "x-guest-id": state.getGuestId() 
-      },
-      body: JSON.stringify(newUser)
-    });
+    get().saveToBackend();
   },
 
   syncWithBackend: async () => {
@@ -263,6 +237,10 @@ export const useGameState = create<GameState>((set, get) => ({
           user: data, 
           totalCoins: data.coins
         });
+        // Update local storage too to ensure they match
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('cyber_runner_profile', JSON.stringify(data));
+        }
         return;
       }
     } catch (e) {
@@ -277,15 +255,10 @@ export const useGameState = create<GameState>((set, get) => ({
         // Force update name if it's still the old total default
         if (data.username === "Local Runner") {
           data.username = `Guest#${guestId.slice(0, 4)}`;
-        }
-        set({
-          user: data,
-          totalCoins: data.coins
-        });
-        
-        // Finalize upgrade if needed
-        if (data.username !== "Local Runner") {
-           get().saveToBackend();
+          set({ user: data, totalCoins: data.coins });
+          get().saveToBackend(); // Force save the upgrade
+        } else {
+          set({ user: data, totalCoins: data.coins });
         }
       } else {
         // First time guest setup
@@ -305,8 +278,16 @@ export const useGameState = create<GameState>((set, get) => ({
     const { user, totalCoins, getGuestId } = get();
     if (!user) return;
 
+    // IMPORTANT: Always update localStorage immediately for responsiveness
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('cyber_runner_profile', JSON.stringify({
+        ...user,
+        coins: totalCoins
+      }));
+    }
+
     try {
-      const res = await fetch("/api/user/profile", {
+      await fetch("/api/user/profile", {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
@@ -317,16 +298,8 @@ export const useGameState = create<GameState>((set, get) => ({
           coins: totalCoins,
         })
       });
-      if (res.ok) return;
     } catch (e) {
       console.warn("Backend save failed:", e);
-    }
-
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('cyber_runner_profile', JSON.stringify({
-        ...user,
-        coins: totalCoins
-      }));
     }
   },
 
