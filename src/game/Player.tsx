@@ -6,6 +6,8 @@ import * as THREE from "three";
 import { useGameState } from "@/hooks/useGameState";
 import { audioManager } from "@/lib/audioManager";
 
+import { useShallow } from "zustand/react/shallow";
+
 const LANE_WIDTH = 4;
 const GRAVITY = 30;
 
@@ -17,7 +19,22 @@ export default function Player() {
   const leftLegRef = useRef<THREE.Group>(null!);
   const rightLegRef = useRef<THREE.Group>(null!);
 
-  const { currentLane, setLane, isGameOver, isPaused, updateDistance, setPlayerY, setPlayerSliding, powerups, activatePowerup, user, gameSpeed } = useGameState();
+  const { 
+    currentLane, setLane, isGameOver, isPaused, updateDistance, setPlayerY, 
+    setPlayerSliding, powerups, activatePowerup, user, gameSpeed 
+  } = useGameState(useShallow(state => ({
+    currentLane: state.currentLane,
+    setLane: state.setLane,
+    isGameOver: state.isGameOver,
+    isPaused: state.isPaused,
+    updateDistance: state.updateDistance,
+    setPlayerY: state.setPlayerY,
+    setPlayerSliding: state.setPlayerSliding,
+    powerups: state.powerups,
+    activatePowerup: state.activatePowerup,
+    user: state.user,
+    gameSpeed: state.gameSpeed
+  })));
   
   const activeSkin = user?.activeSkin || "default";
   const activeBoard = user?.activeBoard || "surf_basic";
@@ -115,21 +132,54 @@ export default function Player() {
       }
     };
 
+    const onMove = (x: number, y: number) => {
+      if (!isDragging || isGameOver || isPaused) return;
+
+      const dx = x - startX;
+      const dy = y - startY;
+
+      if (Math.abs(dx) > MIN_SWIPE || Math.abs(dy) > MIN_SWIPE) {
+        isDragging = false; // Trigger only once per gesture
+        if (Math.abs(dx) > Math.abs(dy)) {
+          if (dx > MIN_SWIPE && currentLane < 1) setLane(currentLane + 1);
+          else if (dx < -MIN_SWIPE && currentLane > -1) setLane(currentLane - 1);
+          audioManager?.play("click", 0.3);
+        } else {
+          if (dy < -MIN_SWIPE && !isJumping) {
+            setIsJumping(true);
+            setJumpVelocity(15);
+            audioManager?.play("jump");
+          } else if (dy > MIN_SWIPE && !isSliding) {
+            setIsSliding(true);
+            setPlayerSliding(true);
+            audioManager?.play("slide", 0.5);
+            setTimeout(() => { setIsSliding(false); setPlayerSliding(false); }, 800);
+          }
+        }
+      }
+    };
+
     const handleTouchStart = (e: TouchEvent) => onStart(e.touches[0].clientX, e.touches[0].clientY);
-    const handleTouchEnd = (e: TouchEvent) => onEnd(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
+    const handleTouchMove = (e: TouchEvent) => onMove(e.touches[0].clientX, e.touches[0].clientY);
+    const handleTouchEnd = () => { isDragging = false; };
     
     const handleMouseDown = (e: MouseEvent) => onStart(e.clientX, e.clientY);
-    const handleMouseUp = (e: MouseEvent) => onEnd(e.clientX, e.clientY);
+    const handleMouseMove = (e: MouseEvent) => onMove(e.clientX, e.clientY);
+    const handleMouseUp = () => { isDragging = false; };
 
     window.addEventListener("touchstart", handleTouchStart, { passive: true });
-    window.addEventListener("touchend", handleTouchEnd, { passive: true });
+    window.addEventListener("touchmove", handleTouchMove, { passive: true });
+    window.addEventListener("touchend", handleTouchEnd);
     window.addEventListener("mousedown", handleMouseDown);
+    window.addEventListener("mousemove", handleMouseMove);
     window.addEventListener("mouseup", handleMouseUp);
     
     return () => {
       window.removeEventListener("touchstart", handleTouchStart);
+      window.removeEventListener("touchmove", handleTouchMove);
       window.removeEventListener("touchend", handleTouchEnd);
       window.removeEventListener("mousedown", handleMouseDown);
+      window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseup", handleMouseUp);
     };
   }, [currentLane, isJumping, isSliding, isGameOver, isPaused, setLane, setPlayerSliding, powerups.hoverboard, user?.activeBoard, activatePowerup]);
@@ -163,7 +213,8 @@ export default function Player() {
 
     // Lane switching interpolation
     const newTargetX = currentLane * LANE_WIDTH;
-    meshRef.current.position.x = THREE.MathUtils.lerp(meshRef.current.position.x, newTargetX, 0.25);
+    const lerpFactor = 1 - Math.exp(-15 * delta);
+    meshRef.current.position.x = THREE.MathUtils.lerp(meshRef.current.position.x, newTargetX, lerpFactor);
 
     // Jump logic
     if (isJumping) {

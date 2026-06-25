@@ -8,6 +8,8 @@ import Powerup from "./Powerup";
 import { useGameState } from "@/hooks/useGameState";
 import { audioManager } from "@/lib/audioManager";
 
+import { useShallow } from "zustand/react/shallow";
+
 const SPAWN_INTERVAL = 0.8; // Seconds
 const LANE_WIDTH = 4;
 const SPAWN_Z = -40; // Closer for testing
@@ -26,7 +28,21 @@ export default function ObstacleManager() {
   const [items, setItems] = useState<GameItem[]>([]);
   const itemsRef = useRef<GameItem[]>([]);
   
-  const { gameSpeed, isGameOver, isPaused, currentLane, playerY, powerups, setGameOver, addCoin, activatePowerup, updatePowerups } = useGameState();
+  const { 
+    gameSpeed, isGameOver, isPaused, currentLane, playerY, 
+    powerups, setGameOver, addCoin, activatePowerup, updatePowerups 
+  } = useGameState(useShallow(state => ({
+    gameSpeed: state.gameSpeed,
+    isGameOver: state.isGameOver,
+    isPaused: state.isPaused,
+    currentLane: state.currentLane,
+    playerY: state.playerY,
+    powerups: state.powerups,
+    setGameOver: state.setGameOver,
+    addCoin: state.addCoin,
+    activatePowerup: state.activatePowerup,
+    updatePowerups: state.updatePowerups
+  })));
   const nextId = useRef(0);
   const timeSinceLastSpawn = useRef(0);
 
@@ -68,8 +84,9 @@ export default function ObstacleManager() {
     let hitFound = false;
     let coinsCaptured = 0;
     let pickedUpPowerup: ItemType | null = null;
+    const initialCount = itemsRef.current.length;
 
-    itemsRef.current = currentItems.map(item => ({
+    itemsRef.current = itemsRef.current.map(item => ({
       ...item,
       z: item.z + gameSpeed * delta * 2.5
     })).filter(item => {
@@ -101,12 +118,10 @@ export default function ObstacleManager() {
       return true;
     });
 
-    // 3. Side Effects (Immediate Trigger)
+    // 3. Side Effects
     if (coinsCaptured > 0) { 
       audioManager?.play("coin", 0.6);
-      for (let i = 0; i < coinsCaptured; i++) {
-        addCoin(); 
-      }
+      for (let i = 0; i < coinsCaptured; i++) { addCoin(); }
     }
 
     if (pickedUpPowerup && pickedUpPowerup !== "obstacle" && pickedUpPowerup !== "coin") {
@@ -121,13 +136,16 @@ export default function ObstacleManager() {
       setGameOver(true);
     }
 
-    // 4. Sync State for Rendering
-    setItems([...itemsRef.current]);
+    // 4. Update React state ONLY when items are added or removed
+    if (itemsRef.current.length !== items.length || items.length === 0) {
+      setItems([...itemsRef.current]);
+    }
   });
 
   return (
     <group>
       {items.map((item) => {
+        // Pass the initial position, but components will move themselves
         const pos: [number, number, number] = [item.lane * LANE_WIDTH, 0.5, item.z];
         if (item.type === "obstacle") return <Obstacle key={item.id} position={pos} />;
         if (item.type === "coin") return <Coin key={item.id} position={pos} />;

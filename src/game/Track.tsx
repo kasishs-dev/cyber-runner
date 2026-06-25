@@ -5,12 +5,18 @@ import { useRef } from "react";
 import * as THREE from "three";
 import { useGameState } from "@/hooks/useGameState";
 
+import { useShallow } from "zustand/react/shallow";
+
 const PLANE_SIZE = 1000;
 const LANE_WIDTH = 4;
 
 export default function Track() {
   const meshRef = useRef<THREE.Mesh>(null!);
-  const { gameSpeed, isGameOver, isPaused } = useGameState();
+  const { gameSpeed, isGameOver, isPaused } = useGameState(useShallow(state => ({
+    gameSpeed: state.gameSpeed,
+    isGameOver: state.isGameOver,
+    isPaused: state.isPaused
+  })));
 
   useFrame((state, delta) => {
     if (isGameOver || isPaused) return;
@@ -56,7 +62,11 @@ function LaneLines() {
 }
 
 function CityWalls() {
-  const { gameSpeed, isGameOver, isPaused } = useGameState();
+  const { gameSpeed, isGameOver, isPaused } = useGameState(useShallow(state => ({
+    gameSpeed: state.gameSpeed,
+    isGameOver: state.isGameOver,
+    isPaused: state.isPaused
+  })));
   const groupRef = useRef<THREE.Group>(null!);
 
   useFrame((state, delta) => {

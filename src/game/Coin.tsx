@@ -2,6 +2,7 @@ import { useFrame } from "@react-three/fiber";
 import { useRef } from "react";
 import * as THREE from "three";
 import { useGameState } from "@/hooks/useGameState";
+import { useShallow } from "zustand/react/shallow";
 
 interface CoinProps {
   position: [number, number, number];
@@ -11,15 +12,23 @@ const MAGNET_RADIUS = 10;
 const MAGNET_STRENGTH = 15;
 
 export default function Coin({ position }: CoinProps) {
-  const meshRef = useRef<THREE.Mesh>(null!);
-  const { powerups, currentLane, playerY } = useGameState();
+  const meshRef = useRef<THREE.Group>(null!);
+  const { magnetActive, currentLane, playerY, gameSpeed } = useGameState(useShallow(state => ({
+    magnetActive: state.powerups.magnet > 0,
+    currentLane: state.currentLane,
+    playerY: state.playerY,
+    gameSpeed: state.gameSpeed
+  })));
 
   useFrame((state, delta) => {
+    // Forward movement (matching track speed)
+    meshRef.current.position.z += gameSpeed * delta * 2.5;
+
     // Rotation animation
     meshRef.current.rotation.y += delta * 2;
 
     // Magnet effect
-    if (powerups.magnet > 0) {
+    if (magnetActive) {
       const playerX = currentLane * 4; // LANE_WIDTH
       const playerPos = new THREE.Vector3(playerX, playerY, 0);
       const coinPos = meshRef.current.position;

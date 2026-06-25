@@ -14,15 +14,17 @@ import { useThree } from "@react-three/fiber";
 import { useEffect } from "react";
 import { audioManager } from "@/lib/audioManager";
 
+import { useShallow } from "zustand/react/shallow";
+
 function ResponsiveCamera() {
   const { viewport } = useThree();
-  const { powerups } = useGameState();
+  const boostActive = useGameState(state => state.powerups.boost > 0);
   
   // Base FOV for horizontal (landscape) is 60
   // For vertical (portrait), we increase FOV to keep lanes in view
   const aspect = viewport.width / viewport.height;
   const baseFov = aspect < 1 ? 75 : 60;
-  const targetFov = powerups.boost > 0 ? baseFov + 20 : baseFov;
+  const targetFov = boostActive ? baseFov + 20 : baseFov;
 
   return (
     <PerspectiveCamera 
@@ -34,7 +36,12 @@ function ResponsiveCamera() {
 }
 
 export default function GameContainer() {
-  const { view, isMuted, masterVolume, gameSpeed } = useGameState();
+  const { view, isMuted, masterVolume, gameSpeed } = useGameState(useShallow(state => ({
+    view: state.view,
+    isMuted: state.isMuted,
+    masterVolume: state.masterVolume,
+    gameSpeed: state.gameSpeed
+  })));
 
   // Audio Sync & BGM Management
   useEffect(() => {
@@ -79,10 +86,10 @@ export default function GameContainer() {
           {/* Post Processing */}
           <EffectComposer>
             <Bloom 
-              intensity={1.5} 
-              luminanceThreshold={0.2} 
+              intensity={1.0} 
+              luminanceThreshold={0.5} 
               luminanceSmoothing={0.9} 
-              height={300} 
+              height={200} 
             />
           </EffectComposer>
         </Suspense>

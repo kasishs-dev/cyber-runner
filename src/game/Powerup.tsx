@@ -3,6 +3,7 @@
 import { useFrame } from "@react-three/fiber";
 import { useRef } from "react";
 import * as THREE from "three";
+import { useGameState } from "@/hooks/useGameState";
 
 interface PowerupProps {
   type: "magnet" | "shield" | "boost";
@@ -17,8 +18,12 @@ const COLORS = {
 
 export default function Powerup({ type, position }: PowerupProps) {
   const meshRef = useRef<THREE.Group>(null!);
+  const gameSpeed = useGameState(state => state.gameSpeed);
 
   useFrame((state, delta) => {
+    // Forward movement
+    meshRef.current.position.z += gameSpeed * delta * 2.5;
+
     meshRef.current.rotation.y += delta * 3;
     meshRef.current.position.y = position[1] + Math.sin(state.clock.elapsedTime * 4) * 0.2;
   });
