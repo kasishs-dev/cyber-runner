@@ -51,6 +51,11 @@ export async function POST(req: NextRequest) {
 
     const { _id, __v, createdAt, ...updateData } = await req.json();
 
+    // Backend safeguard: Never allow 'Local Runner' to be stored for guests
+    if (updateData.username === "Local Runner") {
+      updateData.username = `Guest#${guestId.slice(0, 4)}`;
+    }
+
     const user = await User.findOneAndUpdate(
       { email },
       { $set: updateData },

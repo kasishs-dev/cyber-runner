@@ -278,12 +278,25 @@ export const useGameState = create<GameState>((set, get) => ({
     const { user, totalCoins, getGuestId } = get();
     if (!user) return;
 
+    let finalName = user.username;
+    if (!finalName || finalName === "Local Runner") {
+      finalName = `Guest#${getGuestId().slice(0, 4)}`;
+    }
+
+    const updatedUser = {
+      ...user,
+      username: finalName,
+      coins: totalCoins
+    };
+
     // IMPORTANT: Always update localStorage immediately for responsiveness
     if (typeof window !== 'undefined') {
-      localStorage.setItem('cyber_runner_profile', JSON.stringify({
-        ...user,
-        coins: totalCoins
-      }));
+      localStorage.setItem('cyber_runner_profile', JSON.stringify(updatedUser));
+    }
+
+    // Only update state if the name actually changed to avoid re-render loops
+    if (user.username !== finalName) {
+      set({ user: updatedUser });
     }
 
     try {
@@ -293,10 +306,7 @@ export const useGameState = create<GameState>((set, get) => ({
           "Content-Type": "application/json",
           "x-guest-id": getGuestId() 
         },
-        body: JSON.stringify({
-          ...user,
-          coins: totalCoins,
-        })
+        body: JSON.stringify(updatedUser)
       });
     } catch (e) {
       console.warn("Backend save failed:", e);
