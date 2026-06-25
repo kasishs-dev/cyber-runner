@@ -1,10 +1,12 @@
 import mongoose from "mongoose";
 
-const MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost:27017/cyberrunner";
+const MONGODB_URI = process.env.MONGODB_URI;
 
-if (!MONGODB_URI) {
-  throw new Error("Please define the MONGODB_URI environment variable inside .env.local");
+if (!MONGODB_URI && process.env.NODE_ENV === "production") {
+  console.warn("CRITICAL: MONGODB_URI is not defined in production environment variables!");
 }
+
+const finalUri = MONGODB_URI || "mongodb://localhost:27017/cyberrunner";
 
 interface MongooseCache {
   conn: typeof mongoose | null;
@@ -34,7 +36,7 @@ async function dbConnect() {
     };
 
     console.log("Connecting to MongoDB...");
-    cached!.promise = mongoose.connect(MONGODB_URI, opts).then((mongooseInstance) => {
+    cached!.promise = mongoose.connect(finalUri, opts).then((mongooseInstance) => {
       console.log("MongoDB Connected Successfully");
       return mongooseInstance;
     }).catch((err) => {

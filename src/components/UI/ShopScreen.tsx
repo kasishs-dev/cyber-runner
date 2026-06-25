@@ -57,39 +57,43 @@ export default function ShopScreen() {
   };
 
   return (
-    <div className="absolute inset-0 bg-black/95 backdrop-blur-2xl flex z-50 animate-in fade-in duration-700">
+    <div className="fixed inset-0 md:absolute md:inset-0 md:flex md:items-center md:justify-center md:p-6 bg-black/95 backdrop-blur-2xl z-50 animate-in fade-in duration-700 flex flex-col">
+      {/* Shop Container - Card on Desktop */}
+      <div className="flex-1 flex flex-col md:flex-row md:max-w-5xl md:h-auto md:bg-black/40 md:backdrop-blur-xl md:border md:border-white/5 md:rounded-3xl md:shadow-2xl md:overflow-hidden">
       {/* Sidebar Navigation */}
-      <div className="w-24 border-r border-white/10 flex flex-col items-center py-10 gap-8 bg-black/40">
+      <div className="w-full md:w-24 md:border-r md:flex-col md:py-10 border-b md:border-b-0 border-white/10 flex items-center py-4 md:py-10 gap-4 md:gap-8 bg-black/40 md:bg-transparent md:rounded-l-3xl">
         <button
           onClick={() => setView("home")}
-          className="p-3 rounded-2xl bg-white/5 hover:bg-white/10 text-white/40 hover:text-white transition-all mb-4"
+          className="p-3 rounded-2xl bg-white/5 hover:bg-white/10 text-white/40 hover:text-white transition-all mb-0 md:mb-4"
         >
           <ArrowLeft size={24} />
         </button>
 
-        {CATEGORIES.map(cat => (
-          <button
-            key={cat.id}
-            onClick={() => {
-              setActiveTab(cat.id);
-              setSelectedId(ITEMS[cat.id][0].id);
-            }}
-            className={`p-4 rounded-2xl transition-all relative group ${
-              activeTab === cat.id ? 'bg-neon-pink text-black' : 'text-white/20 hover:text-white/60'
-            }`}
-          >
-            <cat.icon size={28} />
-            <div className={`absolute left-full ml-4 px-2 py-1 bg-white text-black text-[10px] font-black rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-20`}>
-              {cat.name}
-            </div>
-          </button>
-        ))}
+        <div className="flex flex-row md:flex-col gap-4 md:gap-8">
+          {CATEGORIES.map(cat => (
+            <button
+              key={cat.id}
+              onClick={() => {
+                setActiveTab(cat.id);
+                setSelectedId(ITEMS[cat.id][0].id);
+              }}
+              className={`p-4 rounded-2xl transition-all relative group ${
+                activeTab === cat.id ? 'bg-neon-pink text-black' : 'text-white/20 hover:text-white/60'
+              }`}
+            >
+              <cat.icon size={28} />
+              <div className={`absolute left-full md:left-full ml-4 px-2 py-1 bg-white text-black text-[10px] font-black rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-20`}>
+                {cat.name}
+              </div>
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
         {/* Left: Item List */}
-        <div className="flex-1 p-10 overflow-y-auto custom-scrollbar">
+        <div className="flex-1 p-6 md:p-10 overflow-y-auto custom-scrollbar">
           <div className="flex justify-between items-end mb-10">
             <div>
               <h2 className="text-sm font-black uppercase tracking-[0.4em] text-white/30 mb-2">Marketplace</h2>
@@ -178,7 +182,7 @@ export default function ShopScreen() {
 
         {/* Right: Detailed Preview */}
         <div 
-          className="w-[450px] border-l border-white/5 flex flex-col p-10 relative transition-colors duration-500 overflow-hidden"
+          className="w-full md:w-80 lg:w-96 md:border-l md:border-white/5 flex flex-col p-6 md:p-10 relative transition-colors duration-500 overflow-hidden"
           style={{ background: `radial-gradient(circle at center, ${selectedItem.color}15 0%, transparent 70%)` }}
         >
           <div className="flex-1 flex flex-col justify-center gap-8 relative z-10">
@@ -220,6 +224,7 @@ export default function ShopScreen() {
           <div className="absolute bottom-6 right-6 w-16 h-16 border-r-2 border-b-2 border-white/10" />
           <div className="absolute top-6 right-6 text-[10px] font-mono text-white/20 uppercase tracking-[0.5em] [writing-mode:vertical-lr]">Security Cleared</div>
         </div>
+      </div>
       </div>
     </div>
   );

@@ -1,12 +1,22 @@
 "use client";
 
-import { motion } from "framer-motion";
-import { ArrowLeft, User, Trophy, Zap, Star } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { ArrowLeft, User, Trophy, Zap, Star, Edit3, Check, X } from "lucide-react";
 import { useGameState } from "@/hooks/useGameState";
 import { CoinIcon } from "./CoinIcon";
+import { useState } from "react";
 
 export default function ProfileScreen() {
-  const { setView, user, totalCoins } = useGameState();
+  const { setView, user, totalCoins, setUsername } = useGameState();
+  const [isEditing, setIsEditing] = useState(false);
+  const [tempName, setTempName] = useState(user?.username || "");
+
+  const handleSave = () => {
+    if (tempName.trim()) {
+      setUsername(tempName.trim());
+      setIsEditing(false);
+    }
+  };
 
   const stats = [
     { label: "High Score", value: user?.highScore?.toLocaleString() || "0", icon: <Trophy size={18} />, color: "neon-yellow" },
@@ -16,8 +26,8 @@ export default function ProfileScreen() {
   ];
 
   return (
-    <div className="absolute inset-0 bg-black/80 backdrop-blur-3xl flex items-center justify-center p-6 z-[60]">
-      <div className="w-full max-w-md">
+    <div className="fixed inset-0 md:absolute md:inset-0 bg-black/80 backdrop-blur-3xl flex items-center justify-center p-6 z-[60]">
+      <div className="w-full max-w-md md:max-w-xl">
         {/* Back Button */}
         <button
           onClick={() => setView("home")}
@@ -34,14 +44,62 @@ export default function ProfileScreen() {
         >
           {/* Header */}
           <div className="p-8 bg-gradient-to-r from-neon-cyan/10 to-neon-purple/10 border-b border-white/5 flex items-center gap-6">
-            <div className="w-20 h-20 rounded-2xl bg-neon-cyan/20 border border-neon-cyan/30 flex items-center justify-center text-neon-cyan">
+            <div className="w-20 h-20 rounded-2xl bg-neon-cyan/20 border border-neon-cyan/30 flex items-center justify-center text-neon-cyan shrink-0">
               <User size={40} />
             </div>
-            <div>
-              <h2 className="text-2xl font-black italic tracking-tighter text-white uppercase">
-                {user?.username || "Local Runner"}
-              </h2>
-              <p className="text-[10px] font-bold text-white/30 uppercase tracking-[0.3em] mt-1">Cyber Athlete</p>
+            <div className="flex-1 min-w-0">
+              <AnimatePresence mode="wait">
+                {isEditing ? (
+                  <motion.div 
+                    key="edit"
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 10 }}
+                    className="flex items-center gap-2 w-full"
+                  >
+                    <input
+                      autoFocus
+                      type="text"
+                      value={tempName}
+                      onChange={(e) => setTempName(e.target.value.toUpperCase())}
+                      onKeyDown={(e) => e.key === "Enter" && handleSave()}
+                      className="bg-white/10 border-2 border-neon-cyan/50 rounded-lg px-3 py-1.5 text-lg font-bold text-white outline-none w-full shadow-[0_0_10px_rgba(0,242,255,0.2)]"
+                      maxLength={15}
+                    />
+                    <button onClick={handleSave} className="p-2.5 bg-neon-cyan text-black rounded-lg hover:bg-white transition-colors">
+                      <Check size={20} strokeWidth={3} />
+                    </button>
+                    <button onClick={() => { setIsEditing(false); setTempName(user?.username || ""); }} className="p-2.5 bg-white/10 text-white/50 rounded-lg hover:bg-white/20">
+                      <X size={20} />
+                    </button>
+                  </motion.div>
+                ) : (
+                  <motion.div 
+                    key="display"
+                    initial={{ opacity: 0, x: 10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -10 }}
+                    className="flex flex-col"
+                  >
+                    <div className="flex items-center gap-3">
+                      <h2 className="text-2xl font-black italic tracking-tighter text-white uppercase truncate">
+                        {user?.username || "Local Runner"}
+                      </h2>
+                      <button 
+                        onClick={() => {
+                          setTempName(user?.username || "");
+                          setIsEditing(true);
+                        }}
+                        className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-neon-cyan/10 border border-neon-cyan/50 text-neon-cyan hover:bg-neon-cyan hover:text-black transition-all group"
+                      >
+                        <Edit3 size={14} className="group-hover:rotate-12 transition-transform" />
+                        <span className="text-[10px] font-black uppercase tracking-widest">Change Name</span>
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+              <p className="text-[10px] font-bold text-white/30 uppercase tracking-[0.3em] mt-2">Cyber Athlete</p>
               <div className="mt-2 px-2 py-0.5 rounded-full bg-neon-cyan/10 border border-neon-cyan/20 inline-flex items-center gap-1">
                 <div className="w-1.5 h-1.5 rounded-full bg-neon-cyan animate-pulse" />
                 <span className="text-[8px] font-bold text-neon-cyan uppercase tracking-widest">Online</span>

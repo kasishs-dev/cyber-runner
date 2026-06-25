@@ -4,6 +4,10 @@ import User from "@/models/User";
 
 export async function GET() {
   try {
+    if (process.env.NODE_ENV === "production" && !process.env.MONGODB_URI) {
+      throw new Error("MONGODB_URI environment variable is missing");
+    }
+
     await Promise.race([
       dbConnect(),
       new Promise((_, reject) => setTimeout(() => reject(new Error("DB Timeout")), 5000))

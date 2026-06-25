@@ -49,12 +49,12 @@ export async function POST(req: NextRequest) {
     const guestId = req.headers.get("x-guest-id") || "guest";
     const email = session?.user?.email || `guest_${guestId}@local`;
 
-    const body = await req.json();
+    const { _id, __v, createdAt, ...updateData } = await req.json();
 
     const user = await User.findOneAndUpdate(
       { email },
-      { $set: body },
-      { new: true, upsert: true }
+      { $set: updateData },
+      { returnDocument: 'after', upsert: true }
     );
 
     return NextResponse.json(user);

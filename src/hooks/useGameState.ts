@@ -53,6 +53,7 @@ interface GameState {
   setVolume: (volume: number) => void;
   unlockSkin: (skinId: string) => void;
   setSkin: (skinId: string, type: "character" | "board") => void;
+  setUsername: (name: string) => void;
   getGuestId: () => string;
   syncWithBackend: () => Promise<void>;
   saveToBackend: () => Promise<void>;
@@ -129,24 +130,26 @@ export const useGameState = create<GameState>((set, get) => ({
     return { distance: newDist, score: newScore, gameSpeed: newSpeed };
   }),
   setGameOver: (status) => {
-    set((state) => {
-      if (status) {
-        // Check for new high score
-        const isNewHighScore = state.score > (state.user?.highScore || 0);
-        const updatedUser = state.user ? {
-          ...state.user,
-          highScore: isNewHighScore ? state.score : state.user.highScore,
-          coins: state.totalCoins
-        } : null;
+    if (status) {
+      const state = get();
+      // Check for new high score
+      const isNewHighScore = state.score > (state.user?.highScore || 0);
+      const updatedUser = state.user ? {
+        ...state.user,
+        highScore: isNewHighScore ? state.score : state.user.highScore,
+        coins: state.totalCoins
+      } : null;
 
-        if (updatedUser) {
-          // Trigger save
-          setTimeout(() => get().saveToBackend(), 100);
-          return { isGameOver: status, user: updatedUser };
-        }
+      if (updatedUser) {
+        set({ user: updatedUser, isGameOver: true });
+        // Trigger save
+        setTimeout(() => get().saveToBackend(), 100);
+      } else {
+        set({ isGameOver: true });
       }
-      return { isGameOver: status };
-    });
+    } else {
+      set({ isGameOver: false });
+    }
   },
   togglePause: () => set((state) => ({ isPaused: !state.isPaused })),
   setLane: (lane) => set({ currentLane: lane }),
@@ -183,47 +186,68 @@ export const useGameState = create<GameState>((set, get) => ({
   },
 
   unlockSkin: (skinId) => {
-    set((state) => {
-      if (!state.user) return state;
-      const isBoard = skinId.startsWith('surf_');
-      const newUser = {
-        ...state.user,
-        skins: isBoard ? state.user.skins : [...state.user.skins, skinId],
-        boards: isBoard ? [...state.user.boards, skinId] : state.user.boards
-      };
-      
-      // Sync to backend
-      fetch("/api/user/profile", {
-        method: "POST",
-        headers: { 
-          "Content-Type": "application/json",
-          "x-guest-id": get().getGuestId() 
-        },
-        body: JSON.stringify(newUser)
-      });
-      return { user: newUser };
+    const state = get();
+    if (!state.user) return;
+    const isBoard = skinId.startsWith('surf_');
+    const newUser = {
+      ...state.user,
+      skins: isBoard ? state.user.skins : [...state.user.skins, skinId],
+      boards: isBoard ? [...state.user.boards, skinId] : state.user.boards
+    };
+    
+    set({ user: newUser });
+    
+    // Sync to backend
+    fetch("/api/user/profile", {
+      method: "POST",
+      headers: { 
+        "Content-Type": "application/json",
+        "x-guest-id": state.getGuestId() 
+      },
+      body: JSON.stringify(newUser)
     });
   },
 
   setSkin: (skinId, type) => {
-    set((state) => {
-      if (!state.user) return state;
-      const newUser = {
-        ...state.user,
-        activeSkin: type === "character" ? skinId : state.user.activeSkin,
-        activeBoard: type === "board" ? skinId : state.user.activeBoard,
-      };
-      
-      fetch("/api/user/profile", {
-        method: "POST",
-        headers: { 
-          "Content-Type": "application/json",
-          "x-guest-id": get().getGuestId() 
-        },
-        body: JSON.stringify(newUser)
-      });
+    const state = get();
+    if (!state.user) return;
+    const newUser = {
+      ...state.user,
+      activeSkin: type === "character" ? skinId : state.user.activeSkin,
+      activeBoard: type === "board" ? skinId : state.user.activeBoard,
+    };
+    
+    set({ user: newUser });
+    
+    fetch("/api/user/profile", {
+      method: "POST",
+      headers: { 
+        "Content-Type": "application/json",
+        "x-guest-id": state.getGuestId() 
+      },
+      body: JSON.stringify(newUser)
+    });
+  },
 
-      return { user: newUser };
+  setUsername: (name: string) => {
+    const state = get();
+    if (!state.user || !name.trim()) return;
+    
+    const newUser = {
+      ...state.user,
+      username: name.trim().slice(0, 15) // Limit length
+    };
+    
+    set({ user: newUser });
+    
+    // Sync to backend
+    fetch("/api/user/profile", {
+      method: "POST",
+      headers: { 
+        "Content-Type": "application/json",
+        "x-guest-id": state.getGuestId() 
+      },
+      body: JSON.stringify(newUser)
     });
   },
 
@@ -245,21 +269,40 @@ export const useGameState = create<GameState>((set, get) => ({
       console.warn("Backend sync failed:", e);
     }
 
-    // LocalStorage Fallback
+    // LocalStorage Fallback with Unique Name enforcement
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('cyber_runner_profile');
       if (saved) {
-        const data = JSON.parse(saved);
+        let data = JSON.parse(saved);
+        // Force update name if it's still the old total default
+        if (data.username === "Local Runner") {
+          data.username = `Guest#${guestId.slice(0, 4)}`;
+        }
         set({
           user: data,
           totalCoins: data.coins
         });
+        
+        // Finalize upgrade if needed
+        if (data.username !== "Local Runner") {
+           get().saveToBackend();
+        }
+      } else {
+        // First time guest setup
+        const initialName = `Guest#${guestId.slice(0, 4)}`;
+        const newState = {
+          ...get().user!,
+          username: initialName,
+        };
+        set({ user: newState });
+        get().saveToBackend();
+        localStorage.setItem('cyber_runner_profile', JSON.stringify(newState));
       }
     }
   },
 
   saveToBackend: async () => {
-    const { user, totalCoins } = get();
+    const { user, totalCoins, getGuestId } = get();
     if (!user) return;
 
     try {
@@ -267,7 +310,7 @@ export const useGameState = create<GameState>((set, get) => ({
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
-          "x-guest-id": get().getGuestId() 
+          "x-guest-id": getGuestId() 
         },
         body: JSON.stringify({
           ...user,

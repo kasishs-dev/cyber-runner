@@ -16,6 +16,7 @@ export default function Leaderboard() {
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [errorDetails, setErrorDetails] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchLeaderboard = async () => {
@@ -31,6 +32,7 @@ export default function Leaderboard() {
           }
         } else if (data.error) {
           setError(data.error);
+          setErrorDetails(data.details);
         }
       } catch (e) {
         console.error("Failed to load leaderboard");
@@ -43,8 +45,8 @@ export default function Leaderboard() {
   }, []);
 
   return (
-    <div className="absolute inset-0 bg-black/80 backdrop-blur-3xl flex items-center justify-center p-6 z-[60]">
-      <div className="w-full max-w-2xl bg-black/40 backdrop-blur-xl border border-white/5 rounded-3xl overflow-hidden shadow-2xl relative">
+    <div className="fixed inset-0 md:absolute md:inset-0 bg-black/80 backdrop-blur-3xl flex items-center justify-center p-6 z-[60]">
+      <div className="w-full max-w-2xl md:max-w-3xl bg-black/40 backdrop-blur-xl border border-white/5 rounded-3xl overflow-hidden shadow-2xl relative">
         {/* Back Button */}
         <button 
           onClick={() => setView("home")}
@@ -79,9 +81,14 @@ export default function Leaderboard() {
           ) : error ? (
             <div className="py-20 text-center px-10">
               <span className="text-neon-pink text-xs font-bold uppercase tracking-widest block mb-2">{error}</span>
+              {errorDetails && (
+                <span className="text-white/20 text-[8px] font-mono block mb-4 break-all bg-white/5 p-2 rounded-lg leading-relaxed">
+                  {errorDetails}
+                </span>
+              )}
               <p className="text-[10px] text-white/40 uppercase leading-relaxed">
                 Connect to your neural link (Vercel Database) to sync real-time rankings.<br/>
-                Check MONGODB_URI environment variable.
+                Check MONGODB_URI environment variable in Vercel settings.
               </p>
             </div>
           ) : entries.length === 0 ? (
