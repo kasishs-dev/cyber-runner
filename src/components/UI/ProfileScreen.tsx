@@ -81,8 +81,8 @@ export default function ProfileScreen() {
                     exit={{ opacity: 0, x: -10 }}
                     className="flex flex-col"
                   >
-                    <div className="flex items-center gap-3">
-                      <h2 className="text-2xl font-black italic tracking-tighter text-white uppercase truncate">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                      <h2 className="text-xl sm:text-2xl font-black italic tracking-tighter text-white uppercase truncate max-w-[150px] sm:max-w-none">
                         {user?.username || "Local Runner"}
                       </h2>
                       <button 
@@ -90,16 +90,16 @@ export default function ProfileScreen() {
                           setTempName(user?.username || "");
                           setIsEditing(true);
                         }}
-                        className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-neon-cyan/10 border border-neon-cyan/50 text-neon-cyan hover:bg-neon-cyan hover:text-black transition-all group"
+                        className="flex items-center justify-center gap-2 px-3 py-1.5 rounded-full bg-neon-cyan/10 border border-neon-cyan/50 text-neon-cyan hover:bg-neon-cyan hover:text-black transition-all group self-start sm:self-auto"
                       >
-                        <Edit3 size={14} className="group-hover:rotate-12 transition-transform" />
-                        <span className="text-[10px] font-black uppercase tracking-widest">Change Name</span>
+                        <Edit3 size={12} className="group-hover:rotate-12 transition-transform" />
+                        <span className="text-[9px] font-black uppercase tracking-widest">Change Name</span>
                       </button>
                     </div>
                   </motion.div>
                 )}
               </AnimatePresence>
-              <p className="text-[10px] font-bold text-white/30 uppercase tracking-[0.3em] mt-2">Cyber Athlete</p>
+              <p className="text-[9px] font-bold text-white/30 uppercase tracking-[0.3em] mt-1.5">Cyber Athlete</p>
               <div className="mt-2 px-2 py-0.5 rounded-full bg-neon-cyan/10 border border-neon-cyan/20 inline-flex items-center gap-1">
                 <div className="w-1.5 h-1.5 rounded-full bg-neon-cyan animate-pulse" />
                 <span className="text-[8px] font-bold text-neon-cyan uppercase tracking-widest">Online</span>
