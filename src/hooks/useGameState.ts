@@ -53,12 +53,13 @@ interface GameState {
   setVolume: (volume: number) => void;
   unlockSkin: (skinId: string) => void;
   setSkin: (skinId: string, type: "character" | "board") => void;
+  getGuestId: () => string;
   syncWithBackend: () => Promise<void>;
   saveToBackend: () => Promise<void>;
   resetGame: () => void;
 }
 
-export const useGameState = create<GameState>((set) => ({
+export const useGameState = create<GameState>((set, get) => ({
   view: "home",
   score: 0,
   coins: 0,
@@ -127,25 +128,26 @@ export const useGameState = create<GameState>((set) => ({
     const newSpeed = Math.min(40, 10 + Math.floor(newDist / 100) * 1.5);
     return { distance: newDist, score: newScore, gameSpeed: newSpeed };
   }),
-  setGameOver: (status) => set((state) => {
-    if (status) {
-      // Check for new high score
-      const isNewHighScore = state.score > (state.user?.highScore || 0);
-      const updatedUser = state.user ? {
-        ...state.user,
-        highScore: isNewHighScore ? state.score : state.user.highScore,
-        coins: state.totalCoins
-      } : null;
+  setGameOver: (status) => {
+    set((state) => {
+      if (status) {
+        // Check for new high score
+        const isNewHighScore = state.score > (state.user?.highScore || 0);
+        const updatedUser = state.user ? {
+          ...state.user,
+          highScore: isNewHighScore ? state.score : state.user.highScore,
+          coins: state.totalCoins
+        } : null;
 
-      if (updatedUser) {
-        set({ user: updatedUser });
+        if (updatedUser) {
+          // Trigger save
+          setTimeout(() => get().saveToBackend(), 100);
+          return { isGameOver: status, user: updatedUser };
+        }
       }
-
-      // Trigger save
-      setTimeout(() => useGameState.getState().saveToBackend(), 100);
-    }
-    return { isGameOver: status };
-  }),
+      return { isGameOver: status };
+    });
+  },
   togglePause: () => set((state) => ({ isPaused: !state.isPaused })),
   setLane: (lane) => set({ currentLane: lane }),
   setPlayerY: (y) => set({ playerY: y }),
@@ -170,22 +172,38 @@ export const useGameState = create<GameState>((set) => ({
   toggleMute: () => set((state) => ({ isMuted: !state.isMuted })),
   setVolume: (volume) => set({ masterVolume: volume }),
 
-  unlockSkin: (skinId) => set((state) => {
-    if (!state.user) return state;
-    const isBoard = skinId.startsWith('surf_');
-    const newUser = {
-      ...state.user,
-      skins: isBoard ? state.user.skins : [...state.user.skins, skinId],
-      boards: isBoard ? [...state.user.boards, skinId] : state.user.boards
-    };
-    
-    // Sync to backend
-    fetch("/api/user/profile", {
-      method: "POST",
-      body: JSON.stringify(newUser)
+  getGuestId: () => {
+    if (typeof window === 'undefined') return "local";
+    let id = localStorage.getItem('cyber_runner_guest_id');
+    if (!id) {
+      id = Math.random().toString(36).substring(2, 9);
+      localStorage.setItem('cyber_runner_guest_id', id);
+    }
+    return id;
+  },
+
+  unlockSkin: (skinId) => {
+    set((state) => {
+      if (!state.user) return state;
+      const isBoard = skinId.startsWith('surf_');
+      const newUser = {
+        ...state.user,
+        skins: isBoard ? state.user.skins : [...state.user.skins, skinId],
+        boards: isBoard ? [...state.user.boards, skinId] : state.user.boards
+      };
+      
+      // Sync to backend
+      fetch("/api/user/profile", {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          "x-guest-id": get().getGuestId() 
+        },
+        body: JSON.stringify(newUser)
+      });
+      return { user: newUser };
     });
-    return { user: newUser };
-  }),
+  },
 
   setSkin: (skinId, type) => {
     set((state) => {
@@ -198,6 +216,10 @@ export const useGameState = create<GameState>((set) => ({
       
       fetch("/api/user/profile", {
         method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          "x-guest-id": get().getGuestId() 
+        },
         body: JSON.stringify(newUser)
       });
 
@@ -206,8 +228,11 @@ export const useGameState = create<GameState>((set) => ({
   },
 
   syncWithBackend: async () => {
+    const guestId = get().getGuestId();
     try {
-      const res = await fetch("/api/user/profile");
+      const res = await fetch("/api/user/profile", {
+        headers: { "x-guest-id": guestId }
+      });
       const data = await res.json();
       if (data && !data.error) {
         set({ 
@@ -234,12 +259,16 @@ export const useGameState = create<GameState>((set) => ({
   },
 
   saveToBackend: async () => {
-    const { user, totalCoins } = useGameState.getState();
+    const { user, totalCoins } = get();
     if (!user) return;
 
     try {
       const res = await fetch("/api/user/profile", {
         method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          "x-guest-id": get().getGuestId() 
+        },
         body: JSON.stringify({
           ...user,
           coins: totalCoins,

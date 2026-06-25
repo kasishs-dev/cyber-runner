@@ -18,7 +18,10 @@ export async function GET() {
     return NextResponse.json(topUsers);
   } catch (error: any) {
     console.error("Leaderboard error:", error.message);
-    // Return empty array so the UI shows "No Data Found" instead of crashing
-    return NextResponse.json([], { status: 200 });
+    return NextResponse.json({ 
+      error: "Connection Failed", 
+      details: error.message,
+      entries: [] 
+    }, { status: 200 });
   }
 }

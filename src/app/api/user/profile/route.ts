@@ -1,9 +1,9 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import dbConnect from "@/lib/mongodb";
 import User from "@/models/User";
 import { getServerSession } from "next-auth";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     // Try to connect with a short timeout
     await Promise.race([
@@ -12,8 +12,9 @@ export async function GET() {
     ]);
 
     const session = await getServerSession();
-    const email = session?.user?.email || "guest@local"; // Fallback to guest
-    const name = session?.user?.name || "Local Runner";
+    const guestId = req.headers.get("x-guest-id") || "guest";
+    const email = session?.user?.email || `guest_${guestId}@local`;
+    const name = session?.user?.name || `Guest#${guestId.slice(0, 4)}`;
 
     let user = await User.findOne({ email });
     
@@ -41,11 +42,12 @@ export async function GET() {
   }
 }
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
     await dbConnect();
     const session = await getServerSession();
-    const email = session?.user?.email || "guest@local";
+    const guestId = req.headers.get("x-guest-id") || "guest";
+    const email = session?.user?.email || `guest_${guestId}@local`;
 
     const body = await req.json();
 

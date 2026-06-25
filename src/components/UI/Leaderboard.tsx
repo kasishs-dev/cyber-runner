@@ -15,6 +15,7 @@ export default function Leaderboard() {
   const { setView } = useGameState();
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchLeaderboard = async () => {
@@ -22,10 +23,18 @@ export default function Leaderboard() {
         const res = await fetch("/api/leaderboard");
         const data = await res.json();
         if (data && !data.error) {
-          setEntries(data);
+          // If it's an array, it's successful data
+          if (Array.isArray(data)) {
+            setEntries(data);
+          } else if (data.entries) {
+            setEntries(data.entries);
+          }
+        } else if (data.error) {
+          setError(data.error);
         }
       } catch (e) {
         console.error("Failed to load leaderboard");
+        setError("Network Error");
       } finally {
         setLoading(false);
       }
@@ -66,6 +75,14 @@ export default function Leaderboard() {
             <div className="py-20 flex flex-col items-center gap-4 opacity-20">
               <div className="w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin" />
               <span className="text-[10px] font-bold uppercase tracking-widest">Accessing Neural Net...</span>
+            </div>
+          ) : error ? (
+            <div className="py-20 text-center px-10">
+              <span className="text-neon-pink text-xs font-bold uppercase tracking-widest block mb-2">{error}</span>
+              <p className="text-[10px] text-white/40 uppercase leading-relaxed">
+                Connect to your neural link (Vercel Database) to sync real-time rankings.<br/>
+                Check MONGODB_URI environment variable.
+              </p>
             </div>
           ) : entries.length === 0 ? (
             <div className="py-20 text-center opacity-20">
