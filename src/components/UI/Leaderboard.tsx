@@ -21,7 +21,7 @@ export default function Leaderboard() {
   useEffect(() => {
     const fetchLeaderboard = async () => {
       try {
-        const res = await fetch("/api/leaderboard");
+        const res = await fetch(`/api/leaderboard?t=${Date.now()}`);
         const data = await res.json();
         if (data && !data.error) {
           // If it's an array, it's successful data

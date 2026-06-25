@@ -228,7 +228,7 @@ export const useGameState = create<GameState>((set, get) => ({
   syncWithBackend: async () => {
     const guestId = get().getGuestId();
     try {
-      const res = await fetch("/api/user/profile", {
+      const res = await fetch(`/api/user/profile?t=${Date.now()}`, {
         headers: { "x-guest-id": guestId }
       });
       const data = await res.json();
